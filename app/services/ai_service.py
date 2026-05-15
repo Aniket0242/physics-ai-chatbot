@@ -26,22 +26,44 @@ class AIService:
             self._chunks = []
             print("⚠️ chunks.json not found, NCERT search disabled")
 
-    def search_ncert(self, query: str, top_k: int = 3) -> str:
-        """Simple keyword search – no embeddings needed."""
-        self._load_chunks_if_needed()
-        if not self._chunks:
-            return ""
+def search_ncert(self, query: str, top_k: int = 3) -> str:
+    """Improved keyword search with stop-word removal and phrase boosting."""
+    self._load_chunks_if_needed()
+    if not self._chunks:
+        return ""
 
-        query_words = query.lower().split()
-        scored = []
-        for chunk in self._chunks:
-            lower_chunk = chunk.lower()
-            score = sum(1 for word in query_words if word in lower_chunk)
-            if score > 0:
-                scored.append((score, chunk))
-        scored.sort(key=lambda x: x[0], reverse=True)
-        top_chunks = [chunk for score, chunk in scored[:top_k]]
-        return "\n\n".join(top_chunks)
+    # Common English stop words that should not influence search
+    stop_words = {"the", "is", "at", "which", "on", "and", "a", "an", "in", "of", "to", "for", "with", "from", "by", "as", "or", "not", "this", "that", "it", "be", "has", "have", "are", "was", "were", "been", "can", "could", "will", "would", "shall", "should", "may", "might", "must", "i", "you", "he", "she", "we", "they", "me", "him", "us", "them", "my", "your", "his", "her", "its", "our", "their", "mine", "yours", "hers", "ours", "theirs"}
+
+    query_lower = query.lower()
+    # Extract meaningful words (remove stop words and short words)
+    query_words = [w for w in query_lower.split() if w not in stop_words and len(w) > 2]
+    if not query_words:
+        # Fallback: use all words if everything was stop words
+        query_words = query_lower.split()
+
+    # Create a set of topic keywords: any word longer than 4 letters that isn't a stop word
+    topic_keywords = {w for w in query_words if len(w) > 4}
+
+    # For phrase matching, also search for the full query as a substring
+    phrase = query_lower
+
+    scored = []
+    for chunk in self._chunks:
+        lower_chunk = chunk.lower()
+        # Base score: number of query words in the chunk (excluding stop words)
+        base = sum(1 for word in query_words if word in lower_chunk)
+        # Topic boost: each topic keyword that appears gives +3
+        topic_boost = 3 * sum(1 for topic in topic_keywords if topic in lower_chunk)
+        # Phrase boost: if the entire query appears as a continuous string, +5
+        phrase_boost = 5 if phrase in lower_chunk else 0
+        total = base + topic_boost + phrase_boost
+        if total > 0:
+            scored.append((total, chunk))
+
+    scored.sort(key=lambda x: x[0], reverse=True)
+    top_chunks = [chunk for score, chunk in scored[:top_k]]
+    return "\n\n".join(top_chunks)
 
     # --- format_physics_math remains unchanged ---
     def format_physics_math(self, text: str) -> str:
