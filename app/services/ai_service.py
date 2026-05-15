@@ -1,15 +1,11 @@
-import os, json, numpy as np
+import os, json
 from openai import AsyncOpenAI
 from app.core.config import settings
 from app.core.prompts import get_prompt, get_output_instruction
 import re
-from sentence_transformers import SentenceTransformer
-import faiss
 
 class AIService:
-    _model = None
-    _index = None
-    _chunks = None
+    _chunks = None   # only text chunks, no model/index
 
     def __init__(self):
         self.client = AsyncOpenAI(
@@ -17,33 +13,37 @@ class AIService:
             base_url=settings.OPENAI_BASE_URL
         )
 
-    @classmethod
-    def load_ncert_index(cls):
-        if cls._model is None:
-            cls._model = SentenceTransformer('all-MiniLM-L6-v2')
-            index_path = os.path.join("data", "ncert_index", "ncert.index")
-            chunks_path = os.path.join("data", "ncert_index", "chunks.json")
-            if os.path.exists(index_path):
-                cls._index = faiss.read_index(index_path)
-                with open(chunks_path, "r", encoding="utf-8") as f:
-                    cls._chunks = json.load(f)
-                print(f"✅ Loaded NCERT index with {len(cls._chunks)} chunks")
-            else:
-                print("⚠️ NCERT index not found – running without textbook context")
+    def _load_chunks_if_needed(self):
+        """Load chunks from JSON file if not already in memory."""
+        if self._chunks is not None:
+            return
+        chunks_path = os.path.join("data", "ncert_index", "chunks.json")
+        if os.path.exists(chunks_path):
+            with open(chunks_path, "r", encoding="utf-8") as f:
+                self._chunks = json.load(f)
+            print(f"✅ Loaded {len(self._chunks)} text chunks for keyword search")
+        else:
+            self._chunks = []
+            print("⚠️ chunks.json not found, NCERT search disabled")
 
     def search_ncert(self, query: str, top_k: int = 3) -> str:
-        if self._model is None or self._index is None:
+        """Simple keyword search – no embeddings needed."""
+        self._load_chunks_if_needed()
+        if not self._chunks:
             return ""
-        query_vec = self._model.encode([query])
-        distances, indices = self._index.search(
-            np.array(query_vec).astype('float32'), top_k
-        )
-        results = []
-        for idx in indices[0]:
-            if idx < len(self._chunks):
-                results.append(self._chunks[idx])
-        return "\n\n".join(results)
 
+        query_words = query.lower().split()
+        scored = []
+        for chunk in self._chunks:
+            lower_chunk = chunk.lower()
+            score = sum(1 for word in query_words if word in lower_chunk)
+            if score > 0:
+                scored.append((score, chunk))
+        scored.sort(key=lambda x: x[0], reverse=True)
+        top_chunks = [chunk for score, chunk in scored[:top_k]]
+        return "\n\n".join(top_chunks)
+
+    # --- format_physics_math remains unchanged ---
     def format_physics_math(self, text: str) -> str:
         math_blocks = []
         def save_math(match):
@@ -63,17 +63,16 @@ class AIService:
             text = text.replace(f'<<<MATH{i}>>>', block)
         return text
 
+    # --- ask method (same structure, uses the light search) ---
     async def ask(self, question: str, language: str = "en", mode: str = None,
                   extra_context: str = "") -> dict:
-        # 1. NCERT context (always on)
         ncert_context = self.search_ncert(question)
         if ncert_context:
             ncert_context = (
-                "Use the following NCERT textbook content to give a detailed answer:\n"
+                "Use the following NCERT/Board paper content to give a detailed answer:\n"
                 + ncert_context + "\n\n"
             )
 
-        # 2. Combine with question bank context
         full_question = question
         if extra_context:
             full_question = extra_context + ncert_context + "Student's question: " + question
@@ -118,6 +117,7 @@ class AIService:
                 "status": "error"
             }
 
+    # --- MCQ generator unchanged ---
     async def generate_mcq(self, topic: str, difficulty: str = "medium", language: str = "en") -> dict:
         mcq_prompt = get_prompt(language, "mcq_generator")
         user_prompt = f"Topic: {topic}\nDifficulty: {difficulty}"

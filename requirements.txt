@@ -1,1 +1,1 @@
-fastapiuvicornopenaipython-dotenvpydantichttpxsentence-transformersfaiss-cpuPyPDF2
+fastapiuvicornopenaipython-dotenvpydantichttpxPyPDF2
