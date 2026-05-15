@@ -2,24 +2,37 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Physics AI Assistant</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Physics AI Assistant – NEET/JEE/CBSE Tutor</title>
+    <meta name="description" content="Ask any Class 12 Physics question and get step-by-step solutions, derivations, and MCQs. Perfect for NEET, JEE, and CBSE exam preparation.">
+    <meta name="keywords" content="Physics AI chatbot, NEET physics, JEE physics, CBSE class 12 physics, physics tutor, AI physics solver">
+    
     <script>
         MathJax = { tex: { inlineMath: [['$', '$']], displayMath: [['$$', '$$']] } };
     </script>
     <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0f172a; color: #e2e8f0; height: 100vh; display: flex; }
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
 
-        /* SIDEBAR */
+        /* ===== SIDEBAR ===== */
         .sidebar {
-            width: 260px;
+            width: 280px;
             background: #1e293b;
             border-right: 1px solid #334155;
             display: flex;
             flex-direction: column;
             flex-shrink: 0;
+            transition: transform 0.3s ease;
+            z-index: 20;
         }
         .sidebar-header {
             padding: 16px;
@@ -28,15 +41,16 @@
             justify-content: space-between;
             align-items: center;
         }
-        .sidebar-header h3 { font-size: 14px; color: #94a3b8; }
+        .sidebar-header h3 { font-size: 15px; color: #94a3b8; }
         .new-chat-btn {
             background: #3b82f6;
             color: white;
             border: none;
             border-radius: 6px;
-            padding: 6px 12px;
+            padding: 8px 14px;
             cursor: pointer;
-            font-size: 12px;
+            font-size: 13px;
+            font-weight: 500;
         }
         .chat-list {
             flex: 1;
@@ -62,7 +76,7 @@
             color: #64748b;
             cursor: pointer;
             font-size: 14px;
-            padding: 2px 6px;
+            padding: 4px 8px;
             border-radius: 4px;
         }
         .chat-item .delete-btn:hover { color: #ef4444; background: #1e293b; }
@@ -73,28 +87,41 @@
             color: #64748b;
         }
 
-        /* MAIN CHAT AREA */
+        /* ===== MAIN CHAT AREA ===== */
         .main {
             flex: 1;
             display: flex;
             flex-direction: column;
             min-width: 0;
+            height: 100vh;
         }
         .header {
             background: #1e293b;
-            padding: 16px 24px;
+            padding: 12px 16px;
             display: flex;
             align-items: center;
             gap: 12px;
             border-bottom: 1px solid #334155;
+            flex-shrink: 0;
         }
-        .logo { font-size: 28px; }
-        .header h1 { font-size: 20px; font-weight: 600; color: #f1f5f9; }
-        .header span { font-size: 12px; color: #94a3b8; margin-left: auto; }
+        .logo { font-size: 24px; }
+        .header h1 { font-size: 18px; font-weight: 600; color: #f1f5f9; }
+        .header span { font-size: 11px; color: #94a3b8; margin-left: auto; }
+        .hamburger {
+            display: none;
+            background: none;
+            border: none;
+            color: #94a3b8;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 4px;
+            margin-right: 8px;
+        }
+
         .chat-container {
             flex: 1;
             overflow-y: auto;
-            padding: 20px;
+            padding: 16px;
             display: flex;
             flex-direction: column;
             gap: 16px;
@@ -114,14 +141,26 @@
         .message.bot .avatar { background: #3b82f6; }
         .message.user .avatar { background: #10b981; order: 2; }
         .bubble {
-            max-width: 75%; padding: 14px 18px; border-radius: 16px;
-            line-height: 1.6; word-wrap: break-word;
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 16px;
+            line-height: 1.5;
+            word-wrap: break-word;
+            font-size: 14px;
         }
-        .message.bot .bubble { background: #1e293b; border: 1px solid #334155; border-top-left-radius: 4px; }
-        .message.user .bubble { background: #3b82f6; color: white; border-top-right-radius: 4px; }
-        .bubble h2 { font-size: 16px; margin: 12px 0 6px; color: #60a5fa; }
+        .message.bot .bubble {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-top-left-radius: 4px;
+        }
+        .message.user .bubble {
+            background: #3b82f6;
+            color: white;
+            border-top-right-radius: 4px;
+        }
+        .bubble h2 { font-size: 15px; margin: 10px 0 6px; color: #60a5fa; }
         .bubble h2:first-child { margin-top: 0; }
-        .typing .bubble { background: #1e293b; border: 1px solid #334155; padding: 12px 18px; }
+        .typing .bubble { background: #1e293b; border: 1px solid #334155; padding: 12px 16px; }
         .typing-dots { display: flex; gap: 4px; }
         .typing-dots span {
             width: 8px; height: 8px; border-radius: 50%;
@@ -130,46 +169,163 @@
         .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
         .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
         @keyframes bounce { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(-8px); } }
-        .input-area { background: #1e293b; padding: 16px 24px; border-top: 1px solid #334155; }
-        .mode-buttons { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+
+        /* ===== INPUT AREA ===== */
+        .input-area {
+            background: #1e293b;
+            padding: 12px 16px;
+            border-top: 1px solid #334155;
+            flex-shrink: 0;
+        }
+        .mode-buttons {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
         .mode-btn {
-            padding: 6px 14px; border: 1px solid #475569; border-radius: 20px;
-            background: transparent; color: #94a3b8; cursor: pointer; font-size: 13px;
+            padding: 6px 12px;
+            border: 1px solid #475569;
+            border-radius: 20px;
+            background: transparent;
+            color: #94a3b8;
+            cursor: pointer;
+            font-size: 12px;
             transition: all 0.2s;
+            white-space: nowrap;
         }
         .mode-btn:hover { border-color: #60a5fa; color: #60a5fa; }
         .mode-btn.active { background: #3b82f6; border-color: #3b82f6; color: white; }
-        .input-row { display: flex; gap: 10px; align-items: flex-end; }
+        .input-row {
+            display: flex;
+            gap: 8px;
+            align-items: flex-end;
+        }
         .input-row textarea {
-            flex: 1; background: #0f172a; border: 1px solid #334155; border-radius: 12px;
-            padding: 12px 16px; color: #e2e8f0; font-size: 15px; resize: none;
-            font-family: inherit; min-height: 44px; max-height: 120px; outline: none;
+            flex: 1;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 10px 14px;
+            color: #e2e8f0;
+            font-size: 14px;
+            resize: none;
+            font-family: inherit;
+            min-height: 40px;
+            max-height: 100px;
+            outline: none;
+            line-height: 1.4;
         }
         .input-row textarea:focus { border-color: #3b82f6; }
         .send-btn {
-            width: 44px; height: 44px; border-radius: 50%; background: #3b82f6;
-            border: none; color: white; font-size: 20px; cursor: pointer; flex-shrink: 0;
+            width: 40px; height: 40px;
+            border-radius: 50%;
+            background: #3b82f6;
+            border: none;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         .send-btn:hover { background: #2563eb; }
         .send-btn:disabled { background: #334155; cursor: not-allowed; }
-        .chat-container::-webkit-scrollbar { width: 6px; }
-        .chat-container::-webkit-scrollbar-track { background: transparent; }
-        .chat-container::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
-        .empty-state { text-align: center; color: #64748b; margin-top: 60px; }
-        .empty-state .icon { font-size: 64px; margin-bottom: 16px; }
-        .empty-state h3 { font-size: 20px; margin-bottom: 8px; color: #94a3b8; }
-        .suggestions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 20px; }
+
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            color: #64748b;
+            margin-top: 40px;
+        }
+        .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+        .empty-state h3 { font-size: 18px; margin-bottom: 6px; color: #94a3b8; }
+        .suggestions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+            margin-top: 16px;
+        }
         .suggestion-chip {
-            padding: 8px 16px; background: #1e293b; border: 1px solid #334155;
-            border-radius: 20px; color: #94a3b8; cursor: pointer; font-size: 13px;
+            padding: 8px 14px;
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 20px;
+            color: #94a3b8;
+            cursor: pointer;
+            font-size: 13px;
         }
         .suggestion-chip:hover { border-color: #60a5fa; color: #60a5fa; }
+
+        /* ===== MOBILE RESPONSIVENESS ===== */
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                left: 0;
+                top: 0;
+                height: 100vh;
+                transform: translateX(-100%);
+                width: 260px;
+            }
+            .sidebar.open {
+                transform: translateX(0);
+            }
+            .hamburger {
+                display: block;
+            }
+            .header span {
+                display: none; /* hide subtitle on small screens */
+            }
+            .main {
+                width: 100%;
+            }
+            .bubble {
+                max-width: 90%;
+            }
+            .mode-btn {
+                font-size: 11px;
+                padding: 5px 10px;
+            }
+            .input-row textarea {
+                font-size: 13px;
+            }
+        }
+
+        /* Overlay for mobile sidebar */
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 15;
+        }
+        @media (max-width: 768px) {
+            .sidebar-overlay.show {
+                display: block;
+            }
+        }
+
+        /* Scrollbar styling */
+        .chat-container::-webkit-scrollbar { width: 4px; }
+        .chat-container::-webkit-scrollbar-track { background: transparent; }
+        .chat-container::-webkit-scrollbar-thumb { background: #334155; border-radius: 2px; }
+        .chat-list::-webkit-scrollbar { width: 4px; }
+        .chat-list::-webkit-scrollbar-track { background: transparent; }
+        .chat-list::-webkit-scrollbar-thumb { background: #334155; border-radius: 2px; }
     </style>
 </head>
 <body>
 
+<!-- Mobile overlay -->
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
 <!-- SIDEBAR -->
-<div class="sidebar">
+<div class="sidebar" id="sidebar">
     <div class="sidebar-header">
         <h3>📚 Conversations</h3>
         <button class="new-chat-btn" onclick="startNewChat()">＋ New</button>
@@ -181,6 +337,7 @@
 <!-- MAIN CHAT -->
 <div class="main">
     <div class="header">
+        <button class="hamburger" id="hamburgerBtn" onclick="toggleSidebar()">☰</button>
         <div class="logo">🧠</div>
         <h1>Physics AI Assistant</h1>
         <span>Class 12 | NEET · JEE · CBSE</span>
@@ -202,76 +359,77 @@
 
     <div class="input-area">
         <div class="mode-buttons">
-    <button class="mode-btn" onclick="setMode(this, null)">💬 General</button>
-    <button class="mode-btn" onclick="setMode(this, 'solve')">🔢 Solve</button>
-    <button class="mode-btn" onclick="setMode(this, 'derive')">📐 Derive</button>
-    <button class="mode-btn" onclick="setMode(this, 'explain')">📚 Explain</button>
-    <button class="mode-btn" id="bankToggle" onclick="toggleBank()">📚 My Bank</button>
-</div>
+            <button class="mode-btn" onclick="setMode(this, null)">💬 General</button>
+            <button class="mode-btn" onclick="setMode(this, 'solve')">🔢 Solve</button>
+            <button class="mode-btn" onclick="setMode(this, 'derive')">📐 Derive</button>
+            <button class="mode-btn" onclick="setMode(this, 'explain')">📚 Explain</button>
+            <button class="mode-btn" id="bankToggle" onclick="toggleBank()">📚 My Bank</button>
+        </div>
         <div class="input-row">
-            <textarea id="questionInput" placeholder="Ask your physics question here..." rows="1" onkeydown="handleKeyDown(event)" oninput="autoResize(this)"></textarea>
+            <textarea 
+                id="questionInput" 
+                placeholder="Ask your physics question..." 
+                rows="1"
+                onkeydown="handleKeyDown(event)"
+                oninput="autoResize(this)"
+            ></textarea>
             <button class="send-btn" id="sendBtn" onclick="sendMessage()">➤</button>
         </div>
     </div>
 </div>
 
 <script>
-    const API_BASE = "https://physics-ai-chatbot.onrender.com";
+    const API_BASE = "https://physics-ai-chatbot.onrender.com";  // Update if custom domain
     let currentMode = null;
-let useBank = false;
-
-function toggleBank() {
-    useBank = !useBank;
-    const btn = document.getElementById('bankToggle');
-    if (useBank) {
-        btn.classList.add('active');
-    } else {
-        btn.classList.remove('active');
-    }
-}
+    let useBank = false;
     const STORAGE_KEY = 'physicsChatApp';
 
-    // Data structure: { chats: [ { id, title, messages: [ {text, type, timestamp} ] } ], currentChatId: id }
+    // ---------- Sidebar toggle for mobile ----------
+    function toggleSidebar() {
+        document.getElementById('sidebar').classList.toggle('open');
+        document.getElementById('sidebarOverlay').classList.toggle('show');
+    }
+    function closeSidebar() {
+        document.getElementById('sidebar').classList.remove('open');
+        document.getElementById('sidebarOverlay').classList.remove('show');
+    }
+    // Close sidebar when a chat is selected (mobile)
+    function selectChat(chatId) {
+        setCurrentChat(chatId);
+        renderAll();
+        if (window.innerWidth <= 768) closeSidebar();
+    }
+
+    // ---------- App data management ----------
     function getAppData() {
         const raw = localStorage.getItem(STORAGE_KEY);
         return raw ? JSON.parse(raw) : { chats: [], currentChatId: null };
     }
-
     function saveAppData(data) {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     }
-
     function generateId() {
         return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
     }
-
-    // Get current chat object
     function getCurrentChat() {
         const appData = getAppData();
         if (!appData.currentChatId) return null;
         return appData.chats.find(c => c.id === appData.currentChatId) || null;
     }
-
-    // Set current chat and save
     function setCurrentChat(chatId) {
         const appData = getAppData();
         appData.currentChatId = chatId;
         saveAppData(appData);
     }
-
     function startNewChat() {
         const appData = getAppData();
-        const newChat = {
-            id: generateId(),
-            title: 'New Chat',
-            messages: []
-        };
+        const newChat = { id: generateId(), title: 'New Chat', messages: [] };
         appData.chats.unshift(newChat);
         appData.currentChatId = newChat.id;
         saveAppData(appData);
         renderAll();
+        if (window.innerWidth <= 768) closeSidebar();
     }
-
     function deleteChat(chatId) {
         const appData = getAppData();
         appData.chats = appData.chats.filter(c => c.id !== chatId);
@@ -281,30 +439,18 @@ function toggleBank() {
         saveAppData(appData);
         renderAll();
     }
-
-    function selectChat(chatId) {
-        setCurrentChat(chatId);
-        renderAll();
-    }
-
-    // Add a message to the current chat
     function addMessageToCurrentChat(text, type) {
         const appData = getAppData();
         const chat = appData.chats.find(c => c.id === appData.currentChatId);
         if (!chat) return;
-        chat.messages.push({
-            text: text,
-            type: type,
-            timestamp: new Date().toISOString()
-        });
-        // Update title based on first user message
+        chat.messages.push({ text, type, timestamp: new Date().toISOString() });
         if (type === 'user' && chat.messages.filter(m => m.type === 'user').length === 1) {
             chat.title = text.length > 40 ? text.substring(0, 40) + '...' : text;
         }
         saveAppData(appData);
     }
 
-    // Render sidebar list
+    // ---------- Render sidebar and chat ----------
     function renderSidebar() {
         const appData = getAppData();
         const chatList = document.getElementById('chatList');
@@ -319,8 +465,6 @@ function toggleBank() {
             chatList.appendChild(div);
         });
     }
-
-    // Render main chat area with current chat messages
     function renderChat() {
         const container = document.getElementById('chatContainer');
         container.innerHTML = '';
@@ -345,28 +489,25 @@ function toggleBank() {
             addMessageToDOM(msg.text, msg.type, new Date(msg.timestamp));
         });
         container.scrollTop = container.scrollHeight;
-        // Trigger MathJax
         if (window.MathJax) {
             MathJax.typesetPromise([container]);
         }
     }
-
     function renderAll() {
         renderSidebar();
         renderChat();
     }
 
-    // ----- Message sending (unchanged) -----
+    // ---------- Message sending ----------
     async function sendMessage() {
         const input = document.getElementById('questionInput');
         const question = input.value.trim();
         if (!question) return;
 
-        // If no current chat, create one
         let appData = getAppData();
         if (!appData.currentChatId || !appData.chats.find(c => c.id === appData.currentChatId)) {
             startNewChat();
-            appData = getAppData(); // refresh after creating
+            appData = getAppData();
         }
 
         const sendBtn = document.getElementById('sendBtn');
@@ -377,10 +518,9 @@ function toggleBank() {
         const emptyState = document.getElementById('emptyState');
         if (emptyState) emptyState.remove();
 
-        // Add user message
         addMessageToCurrentChat(question, 'user');
-        renderChat(); // re-render to show user message immediately
-        renderSidebar(); // update title in sidebar
+        renderChat();
+        renderSidebar();
 
         const typingMsg = addTypingIndicator();
 
@@ -388,7 +528,7 @@ function toggleBank() {
             const response = await fetch(`${API_BASE}/ask`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ question, language: 'en', mode: currentMode,use_bank: useBank})
+                body: JSON.stringify({ question, language: 'en', mode: currentMode, use_bank: useBank })
             });
             const data = await response.json();
             typingMsg.remove();
@@ -409,7 +549,6 @@ function toggleBank() {
         renderSidebar();
     }
 
-    // DOM rendering helper (unchanged)
     function addMessageToDOM(text, type, timestamp) {
         const container = document.getElementById('chatContainer');
         const msgDiv = document.createElement('div');
@@ -455,15 +594,19 @@ function toggleBank() {
         return msgDiv;
     }
 
-    // Mode & helpers (unchanged)
+    // ---------- Helpers ----------
     function setMode(btn, mode) {
         document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         currentMode = mode;
     }
+    function toggleBank() {
+        useBank = !useBank;
+        document.getElementById('bankToggle').classList.toggle('active', useBank);
+    }
     function autoResize(textarea) {
         textarea.style.height = 'auto';
-        textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+        textarea.style.height = Math.min(textarea.scrollHeight, 100) + 'px';
     }
     function handleKeyDown(event) {
         if (event.key === 'Enter' && !event.shiftKey) {
@@ -476,14 +619,12 @@ function toggleBank() {
         sendMessage();
     }
 
-    // Initial load
+    // ---------- Initial load ----------
     renderAll();
-    // If no chats exist, auto-create one
     if (!getCurrentChat()) {
         startNewChat();
     }
     document.getElementById('questionInput').focus();
 </script>
-
 </body>
 </html>
