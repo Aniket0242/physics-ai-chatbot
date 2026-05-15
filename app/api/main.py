@@ -29,7 +29,10 @@ class MCQItem(BaseModel):
     explanation: str
     topic: str = ""
     difficulty: str = "medium"
-
+@app.on_event("startup")
+async def startup_event():
+    from app.services.ai_service import AIService
+    AIService.load_ncert_index()
 
 @app.get("/")
 async def root():
