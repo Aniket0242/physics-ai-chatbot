@@ -1,8 +1,8 @@
 services:
   - type: web
     name: physics-ai-chatbot
-    runtime: python
-    buildCommand: pip install -r requirements.txt
+    runtime: python311
+    buildCommand: pip install --only-binary :all: -r requirements.txt
     startCommand: uvicorn app.api.main:app --host 0.0.0.0 --port 10000
     envVars:
       - key: OPENAI_API_KEY
@@ -11,3 +11,5 @@ services:
         sync: false
       - key: AI_MODEL
         sync: false
+      - key: CARGO_HOME
+        value: /tmp
