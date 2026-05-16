@@ -33,19 +33,25 @@ def add_mcq(mcq: Dict):
 
 
 def search_bank(query: str, top_k: int = 3) -> List[Dict]:
-    """
-    Simple keyword-based search.
-    Returns the top_k MCQs whose question/explanation/topic contains the query words.
-    This is a basic fallback – you can later replace it with vector search.
-    """
+    """Search the question bank across all relevant fields."""
     mcqs = load_bank()
     query_words = query.lower().split()
     scored = []
-    for mcq in mcqs:
-        text = (mcq.get("question", "") + " " + mcq.get("explanation", "") + " " + mcq.get("topic", "")).lower()
-        score = sum(1 for word in query_words if word in text)
+    for item in mcqs:
+        # Combine all searchable text
+        text_parts = [
+            item.get("question", ""),
+            item.get("explanation", ""),
+            item.get("answer", ""),
+            item.get("topic", ""),
+            item.get("figure_description", ""),
+            str(item.get("year", "")),
+            item.get("set_type", ""),
+            str(item.get("marks", ""))
+        ]
+        combined = " ".join(text_parts).lower()
+        score = sum(1 for word in query_words if word in combined)
         if score > 0:
-            scored.append((score, mcq))
-    # Sort by score descending
+            scored.append((score, item))
     scored.sort(key=lambda x: x[0], reverse=True)
-    return [mcq for score, mcq in scored[:top_k]]
+    return [item for score, item in scored[:top_k]]
