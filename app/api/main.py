@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+# Force redeploy v2
 from fastapi.staticfiles import StaticFiles
 from app.core.config import settings
 from app.models.schemas import AskRequest, AskResponse, MCQRequest, MCQResponse
