@@ -1,3 +1,4 @@
+# v5 - complete with ask method
 import os, json
 from openai import AsyncOpenAI
 from app.core.config import settings
@@ -5,7 +6,7 @@ from app.core.prompts import get_prompt, get_output_instruction
 import re
 
 class AIService:
-    _chunks = None   # only text chunks, no model/index
+    _chunks = None
 
     def __init__(self):
         self.client = AsyncOpenAI(
@@ -14,7 +15,6 @@ class AIService:
         )
 
     def _load_chunks_if_needed(self):
-        """Load chunks from JSON file if not already in memory."""
         if self._chunks is not None:
             return
         chunks_path = os.path.join("data", "ncert_index", "chunks.json")
@@ -26,46 +26,35 @@ class AIService:
             self._chunks = []
             print("⚠️ chunks.json not found, NCERT search disabled")
 
-def search_ncert(self, query: str, top_k: int = 3) -> str:
-    """Improved keyword search with stop-word removal and phrase boosting."""
-    self._load_chunks_if_needed()
-    if not self._chunks:
-        return ""
+    def search_ncert(self, query: str, top_k: int = 3) -> str:
+        self._load_chunks_if_needed()
+        if not self._chunks:
+            return ""
 
-    # Common English stop words that should not influence search
-    stop_words = {"the", "is", "at", "which", "on", "and", "a", "an", "in", "of", "to", "for", "with", "from", "by", "as", "or", "not", "this", "that", "it", "be", "has", "have", "are", "was", "were", "been", "can", "could", "will", "would", "shall", "should", "may", "might", "must", "i", "you", "he", "she", "we", "they", "me", "him", "us", "them", "my", "your", "his", "her", "its", "our", "their", "mine", "yours", "hers", "ours", "theirs"}
+        stop_words = {"the", "is", "at", "which", "on", "and", "a", "an", "in", "of", "to", "for", "with", "from", "by", "as", "or", "not", "this", "that", "it", "be", "has", "have", "are", "was", "were", "been", "can", "could", "will", "would", "shall", "should", "may", "might", "must", "i", "you", "he", "she", "we", "they", "me", "him", "us", "them", "my", "your", "his", "her", "its", "our", "their", "mine", "yours", "hers", "ours", "theirs"}
 
-    query_lower = query.lower()
-    # Extract meaningful words (remove stop words and short words)
-    query_words = [w for w in query_lower.split() if w not in stop_words and len(w) > 2]
-    if not query_words:
-        # Fallback: use all words if everything was stop words
-        query_words = query_lower.split()
+        query_lower = query.lower()
+        query_words = [w for w in query_lower.split() if w not in stop_words and len(w) > 2]
+        if not query_words:
+            query_words = query_lower.split()
 
-    # Create a set of topic keywords: any word longer than 4 letters that isn't a stop word
-    topic_keywords = {w for w in query_words if len(w) > 4}
+        topic_keywords = {w for w in query_words if len(w) > 4}
+        phrase = query_lower
 
-    # For phrase matching, also search for the full query as a substring
-    phrase = query_lower
+        scored = []
+        for chunk in self._chunks:
+            lower_chunk = chunk.lower()
+            base = sum(1 for word in query_words if word in lower_chunk)
+            topic_boost = 3 * sum(1 for topic in topic_keywords if topic in lower_chunk)
+            phrase_boost = 5 if phrase in lower_chunk else 0
+            total = base + topic_boost + phrase_boost
+            if total > 0:
+                scored.append((total, chunk))
 
-    scored = []
-    for chunk in self._chunks:
-        lower_chunk = chunk.lower()
-        # Base score: number of query words in the chunk (excluding stop words)
-        base = sum(1 for word in query_words if word in lower_chunk)
-        # Topic boost: each topic keyword that appears gives +3
-        topic_boost = 3 * sum(1 for topic in topic_keywords if topic in lower_chunk)
-        # Phrase boost: if the entire query appears as a continuous string, +5
-        phrase_boost = 5 if phrase in lower_chunk else 0
-        total = base + topic_boost + phrase_boost
-        if total > 0:
-            scored.append((total, chunk))
+        scored.sort(key=lambda x: x[0], reverse=True)
+        top_chunks = [chunk for score, chunk in scored[:top_k]]
+        return "\n\n".join(top_chunks)
 
-    scored.sort(key=lambda x: x[0], reverse=True)
-    top_chunks = [chunk for score, chunk in scored[:top_k]]
-    return "\n\n".join(top_chunks)
-
-    # --- format_physics_math remains unchanged ---
     def format_physics_math(self, text: str) -> str:
         math_blocks = []
         def save_math(match):
@@ -85,7 +74,6 @@ def search_ncert(self, query: str, top_k: int = 3) -> str:
             text = text.replace(f'<<<MATH{i}>>>', block)
         return text
 
-    # --- ask method (same structure, uses the light search) ---
     async def ask(self, question: str, language: str = "en", mode: str = None,
                   extra_context: str = "") -> dict:
         ncert_context = self.search_ncert(question)
@@ -139,7 +127,6 @@ def search_ncert(self, query: str, top_k: int = 3) -> str:
                 "status": "error"
             }
 
-    # --- MCQ generator unchanged ---
     async def generate_mcq(self, topic: str, difficulty: str = "medium", language: str = "en") -> dict:
         mcq_prompt = get_prompt(language, "mcq_generator")
         user_prompt = f"Topic: {topic}\nDifficulty: {difficulty}"
