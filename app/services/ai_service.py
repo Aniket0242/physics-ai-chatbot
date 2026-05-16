@@ -26,34 +26,59 @@ class AIService:
             self._chunks = []
             print("⚠️ chunks.json not found, NCERT search disabled")
 
-    def search_ncert(self, query: str, top_k: int = 3) -> str:
-        self._load_chunks_if_needed()
-        if not self._chunks:
-            return ""
+   def search_ncert(self, query: str, top_k: int = 3) -> str:
+    self._load_chunks_if_needed()
+    if not self._chunks:
+        return ""
 
-        stop_words = {"the", "is", "at", "which", "on", "and", "a", "an", "in", "of", "to", "for", "with", "from", "by", "as", "or", "not", "this", "that", "it", "be", "has", "have", "are", "was", "were", "been", "can", "could", "will", "would", "shall", "should", "may", "might", "must", "i", "you", "he", "she", "we", "they", "me", "him", "us", "them", "my", "your", "his", "her", "its", "our", "their", "mine", "yours", "hers", "ours", "theirs"}
+    # Common physics topics (lowercase)
+    physics_topics = {
+        "electrostatics", "current electricity", "magnetism", "electromagnetic induction",
+        "alternating current", "electromagnetic waves", "optics", "ray optics", "wave optics",
+        "dual nature", "atoms", "nuclei", "semiconductor", "electronic devices",
+        "communication systems", "kinematics", "laws of motion", "work energy", "power",
+        "rotational motion", "gravitation", "thermodynamics", "kinetic theory", "oscillations",
+        "waves", "electric charges", "electric fields", "potential", "capacitance",
+        "moving charges", "magnetism and matter", "photoelectric effect", "interference",
+        "diffraction", "polarisation", "light", "mirror", "lens", "prism"
+    }
 
-        query_lower = query.lower()
-        query_words = [w for w in query_lower.split() if w not in stop_words and len(w) > 2]
-        if not query_words:
-            query_words = query_lower.split()
+    query_lower = query.lower()
 
-        topic_keywords = {w for w in query_words if len(w) > 4}
-        phrase = query_lower
+    # Detect which physics topics are mentioned in the query
+    detected_topics = [topic for topic in physics_topics if topic in query_lower]
 
-        scored = []
-        for chunk in self._chunks:
-            lower_chunk = chunk.lower()
-            base = sum(1 for word in query_words if word in lower_chunk)
-            topic_boost = 3 * sum(1 for topic in topic_keywords if topic in lower_chunk)
-            phrase_boost = 5 if phrase in lower_chunk else 0
-            total = base + topic_boost + phrase_boost
-            if total > 0:
-                scored.append((total, chunk))
+    stop_words = {"the", "is", "at", "which", "on", "and", "a", "an", "in", "of", "to", "for",
+                  "with", "from", "by", "as", "or", "not", "this", "that", "it", "be", "has",
+                  "have", "are", "was", "were", "been", "can", "could", "will", "would", "shall",
+                  "should", "may", "might", "must", "i", "you", "he", "she", "we", "they", "me",
+                  "him", "us", "them", "my", "your", "his", "her", "its", "our", "their", "give",
+                  "question", "from", "board", "pyq", "cbse", "jee", "neet"}
 
-        scored.sort(key=lambda x: x[0], reverse=True)
-        top_chunks = [chunk for score, chunk in scored[:top_k]]
-        return "\n\n".join(top_chunks)
+    query_words = [w for w in query_lower.split() if w not in stop_words and len(w) > 2]
+    if not query_words:
+        query_words = query_lower.split()
+
+    topic_keywords = {w for w in query_words if len(w) > 4}
+    phrase = query_lower
+
+    scored = []
+    for chunk in self._chunks:
+        lower_chunk = chunk.lower()
+        base = sum(1 for word in query_words if word in lower_chunk)
+        topic_boost = 3 * sum(1 for topic in topic_keywords if topic in lower_chunk)
+        phrase_boost = 5 if phrase in lower_chunk else 0
+
+        # Heavy boost: if a detected physics topic appears in the chunk, add 10 points
+        chapter_boost = 10 * sum(1 for topic in detected_topics if topic in lower_chunk)
+
+        total = base + topic_boost + phrase_boost + chapter_boost
+        if total > 0:
+            scored.append((total, chunk))
+
+    scored.sort(key=lambda x: x[0], reverse=True)
+    top_chunks = [chunk for score, chunk in scored[:top_k]]
+    return "\n\n".join(top_chunks)
 
     def format_physics_math(self, text: str) -> str:
         math_blocks = []
