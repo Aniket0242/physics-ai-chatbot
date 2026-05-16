@@ -6,7 +6,7 @@ import faiss
 import numpy as np
 
 # Process both NCERT and board papers
-PDF_FOLDERS = ["data/ncert_pdfs", "data/board_papers"]
+PDF_FOLDERS = ["data/ncert_pdfs"]
 OUTPUT_FOLDER = "data/ncert_index"
 CHUNK_SIZE = 500
 
