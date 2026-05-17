@@ -22,7 +22,7 @@ app.add_middleware(
 app.mount("/static", StaticFiles(directory="static", html=True), name="static")
 
 
-# MCQ Item model for question bank
+# MCQ Item model for question bank (kept for API compatibility)
 class MCQItem(BaseModel):
     question: str
     options: Dict[str, str]
@@ -43,15 +43,42 @@ async def health():
 
 @app.post("/ask", response_model=AskResponse)
 async def ask_question(request: AskRequest):
-    # If bank is to be used, retrieve relevant context
     bank_context = ""
     if request.use_bank:
         results = search_bank(request.question, top_k=3)
         if results:
-            bank_context = "Here are some relevant questions from your personal bank:\n"
-            for i, mcq in enumerate(results, 1):
-                bank_context += f"{i}. Q: {mcq['question']}\n   Explanation: {mcq['explanation']}\n\n"
-            bank_context += "Use this context to inform your answer.\n\n"
+            # Mandatory directive to force AI to use bank questions
+            bank_context = (
+                "IMPORTANT: You MUST answer using ONLY the following questions from the student's personal bank. "
+                "Choose the most relevant one and present it EXACTLY as given, including all options, the correct answer, and the explanation. "
+                "Do NOT add any extra information or use your own knowledge.\n\n"
+                "Here are the questions:\n"
+            )
+            for i, item in enumerate(results, 1):
+                if item.get("type") == "mcq":
+                    bank_context += (
+                        f"{i}. [MCQ] {item['question']}\n"
+                        f"   Options: {item['options']}\n"
+                        f"   Correct: {item['correct']}\n"
+                        f"   Explanation: {item['explanation']}\n"
+                    )
+                else:
+                    q_type = item.get("type", "short").capitalize()
+                    bank_context += (
+                        f"{i}. [{q_type}] {item['question']}\n"
+                        f"   Answer: {item.get('answer', '')}\n"
+                    )
+                # Include year/set info if available
+                if item.get("year"):
+                    bank_context += f"   Year: {item['year']}\n"
+                if item.get("set_type"):
+                    bank_context += f"   Set: {item['set_type']}\n"
+                if item.get("marks"):
+                    bank_context += f"   Marks: {item['marks']}\n"
+                if item.get("figure_description"):
+                    bank_context += f"   Figure description: {item['figure_description']}\n"
+                bank_context += "\n"
+            bank_context += "End of bank questions. Remember: you MUST answer with one of them exactly as provided.\n\n"
 
     result = await ai_service.ask(
         question=request.question,
