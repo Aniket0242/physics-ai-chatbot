@@ -97,21 +97,21 @@ async def ask_question(request: AskRequest):
                         f"{opts_str}\n"
                         f"   Correct Answer: {item['correct']}\n"
                         f"   Explanation: {item['explanation']}\n"
-elif item.get("type") == "assertion_reason":
-    options = item['options']
-    opt_lines = []
-    for key in ['A', 'B', 'C', 'D']:
-        if key in options:
-            opt_lines.append(f"{key.lower()}) {options[key]}")
-    opts_str = "\n".join(opt_lines)
-    bank_context += (
-        f"{i}. [Assertion-Reason]\n"
-        f"   Assertion (A): {item['assertion']}\n"
-        f"   Reason (R): {item['reason']}\n"
-        f"{opts_str}\n"
-        f"   Correct Answer: {item['correct']}\n"
-        f"   Explanation: {item['explanation']}\n"
-    )
+                    )
+                elif item.get("type") == "assertion_reason":
+                    options = item['options']
+                    opt_lines = []
+                    for key in ['A', 'B', 'C', 'D']:
+                        if key in options:
+                            opt_lines.append(f"{key.lower()}) {options[key]}")
+                    opts_str = "\n".join(opt_lines)
+                    bank_context += (
+                        f"{i}. [Assertion-Reason]\n"
+                        f"   Assertion (A): {item['assertion']}\n"
+                        f"   Reason (R): {item['reason']}\n"
+                        f"{opts_str}\n"
+                        f"   Correct Answer: {item['correct']}\n"
+                        f"   Explanation: {item['explanation']}\n"
                     )
                 else:
                     q_type = item.get("type", "short").capitalize()
@@ -140,7 +140,6 @@ elif item.get("type") == "assertion_reason":
     if result["status"] == "error":
         raise HTTPException(status_code=500, detail=result["answer"])
     return AskResponse(**result)
-
 
 @app.post("/mcq", response_model=MCQResponse)
 async def generate_mcq(request: MCQRequest):
