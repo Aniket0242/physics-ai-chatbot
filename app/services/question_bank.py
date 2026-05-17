@@ -39,17 +39,19 @@ def search_bank(query: str, top_k: int = 3) -> List[Dict]:
     scored = []
     for item in mcqs:
         # Combine all searchable text
-        text_parts = [
-            item.get("question", ""),
-            item.get("explanation", ""),
-            item.get("answer", ""),
-            item.get("topic", ""),
-            item.get("figure_description", ""),
-            str(item.get("year", "")),
-            item.get("set_type", ""),
-            item.get("type", ""),
-            str(item.get("marks", ""))
-        ]
+      text_parts = [
+    item.get("question", ""),
+    item.get("explanation", ""),
+    item.get("answer", ""),
+    item.get("topic", ""),
+    item.get("figure_description", ""),
+    item.get("assertion", ""),   # <-- add this
+    item.get("reason", ""),      # <-- add this
+    str(item.get("year", "")),
+    item.get("set_type", ""),
+    item.get("type", ""),
+    str(item.get("marks", ""))
+]
         combined = " ".join(text_parts).lower()
         
         # Base score: number of matching words
