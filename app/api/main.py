@@ -45,25 +45,43 @@ async def health():
 async def ask_question(request: AskRequest):
     bank_context = ""
     if request.use_bank:
-        results = search_bank(request.question, top_k=3)
+        # Check if the user asked for "all" or "multiple"
+        ask_all = any(word in request.question.lower() for word in ["all", "every", "list all", "multiple"])
+        
+        # Use a higher limit for "all" queries – up to 20 questions
+        limit = 20 if ask_all else 3
+        results = search_bank(request.question, top_k=limit)
+
         if results:
-            # Check if the user asked for "all" or "multiple"
-            ask_all = any(word in request.question.lower() for word in ["all", "every", "list all", "multiple"])
             directive = (
                 "IMPORTANT: You MUST answer using ONLY the following questions from the student's personal bank. "
             )
             if ask_all:
                 directive += (
-                    "The student asked for ALL available questions. List EVERY question provided below, "
-                    "each with its options (in a), b), c), d) format), the correct answer, and the explanation. "
-                    "Do NOT skip any question.\n\n"
+                    f"The student asked for ALL available questions. Below are {len(results)} questions. "
+                    "List EVERY question exactly as given, in the format:\n"
+                    "   Q: <question text>\n"
+                    "   a) <option A>\n"
+                    "   b) <option B>\n"
+                    "   c) <option C>\n"
+                    "   d) <option D>\n"
+                    "   Correct Answer: <correct letter>\n"
+                    "   Explanation: <explanation>\n"
+                    "Do NOT add any extra headings like CONCEPT, FORMULA, or additional commentary.\n\n"
                 )
             else:
                 directive += (
-                    "Choose the most relevant question and present it with its options (in a), b), c), d) format), "
-                    "the correct answer, and the explanation. Do NOT add any extra information.\n\n"
+                    "Choose the most relevant question and present it EXACTLY as given, in the format:\n"
+                    "   Q: <question text>\n"
+                    "   a) <option A>\n"
+                    "   b) <option B>\n"
+                    "   c) <option C>\n"
+                    "   d) <option D>\n"
+                    "   Correct Answer: <correct letter>\n"
+                    "   Explanation: <explanation>\n"
+                    "Do NOT add any extra headings or commentary.\n\n"
                 )
-            bank_context = directive + "Here are the questions:\n"
+            bank_context = directive + "Here are the questions:\n\n"
 
             for i, item in enumerate(results, 1):
                 if item.get("type") == "mcq":
