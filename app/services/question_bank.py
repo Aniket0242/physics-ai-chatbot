@@ -33,7 +33,7 @@ def add_mcq(mcq: Dict):
 
 
 def search_bank(query: str, top_k: int = 3) -> List[Dict]:
-    """Search the question bank across all relevant fields."""
+    """Search the question bank with smart boosting for year, type, and set."""
     mcqs = load_bank()
     query_words = query.lower().split()
     scored = []
@@ -47,11 +47,26 @@ def search_bank(query: str, top_k: int = 3) -> List[Dict]:
             item.get("figure_description", ""),
             str(item.get("year", "")),
             item.get("set_type", ""),
+            item.get("type", ""),
             str(item.get("marks", ""))
         ]
         combined = " ".join(text_parts).lower()
-        score = sum(1 for word in query_words if word in combined)
-        if score > 0:
-            scored.append((score, item))
+        
+        # Base score: number of matching words
+        base = sum(1 for word in query_words if word in combined)
+        
+        # Boost: if query mentions the exact year, add 10
+        year_boost = 10 if str(item.get("year")) in query_words else 0
+        
+        # Boost: if query mentions the type (mcq, short, long)
+        type_boost = 5 if item.get("type", "") in query_words else 0
+        
+        # Boost: if query mentions the set_type (regular/visually_impaired)
+        set_boost = 5 if item.get("set_type", "") in query_words else 0
+        
+        total = base + year_boost + type_boost + set_boost
+        if total > 0:
+            scored.append((total, item))
+    
     scored.sort(key=lambda x: x[0], reverse=True)
     return [item for score, item in scored[:top_k]]
