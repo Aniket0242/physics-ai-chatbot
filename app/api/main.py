@@ -47,19 +47,37 @@ async def ask_question(request: AskRequest):
     if request.use_bank:
         results = search_bank(request.question, top_k=3)
         if results:
-            # Mandatory directive to force AI to use bank questions
-            bank_context = (
+            # Check if the user asked for "all" or "multiple"
+            ask_all = any(word in request.question.lower() for word in ["all", "every", "list all", "multiple"])
+            directive = (
                 "IMPORTANT: You MUST answer using ONLY the following questions from the student's personal bank. "
-                "Choose the most relevant one and present it EXACTLY as given, including all options, the correct answer, and the explanation. "
-                "Do NOT add any extra information or use your own knowledge.\n\n"
-                "Here are the questions:\n"
             )
+            if ask_all:
+                directive += (
+                    "The student asked for ALL available questions. List EVERY question provided below, "
+                    "each with its options (in a), b), c), d) format), the correct answer, and the explanation. "
+                    "Do NOT skip any question.\n\n"
+                )
+            else:
+                directive += (
+                    "Choose the most relevant question and present it with its options (in a), b), c), d) format), "
+                    "the correct answer, and the explanation. Do NOT add any extra information.\n\n"
+                )
+            bank_context = directive + "Here are the questions:\n"
+
             for i, item in enumerate(results, 1):
                 if item.get("type") == "mcq":
+                    # Format options as a), b), c), d)
+                    options = item['options']
+                    opt_lines = []
+                    for key in ['A', 'B', 'C', 'D']:
+                        if key in options:
+                            opt_lines.append(f"{key.lower()}) {options[key]}")
+                    opts_str = "\n".join(opt_lines)
                     bank_context += (
                         f"{i}. [MCQ] {item['question']}\n"
-                        f"   Options: {item['options']}\n"
-                        f"   Correct: {item['correct']}\n"
+                        f"{opts_str}\n"
+                        f"   Correct Answer: {item['correct']}\n"
                         f"   Explanation: {item['explanation']}\n"
                     )
                 else:
@@ -78,7 +96,7 @@ async def ask_question(request: AskRequest):
                 if item.get("figure_description"):
                     bank_context += f"   Figure description: {item['figure_description']}\n"
                 bank_context += "\n"
-            bank_context += "End of bank questions. Remember: you MUST answer with one of them exactly as provided.\n\n"
+            bank_context += "End of bank questions.\n\n"
 
     result = await ai_service.ask(
         question=request.question,
