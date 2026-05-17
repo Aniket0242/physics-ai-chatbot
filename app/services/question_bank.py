@@ -2,14 +2,12 @@ import json
 import os
 from typing import List, Dict, Optional
 
-# Path to your custom MCQ bank file
 BANK_PATH = os.path.join("data", "question_bank", "custom_mcqs.json")
 
 
 def load_bank() -> List[Dict]:
-    """Load the question bank from JSON file. Returns list of MCQs."""
+    """Load the question bank from JSON file. Returns list of questions."""
     if not os.path.exists(BANK_PATH):
-        # Create an empty bank if not exists
         os.makedirs(os.path.dirname(BANK_PATH), exist_ok=True)
         with open(BANK_PATH, "w", encoding="utf-8") as f:
             json.dump([], f)
@@ -26,32 +24,32 @@ def save_bank(mcqs: List[Dict]):
 
 
 def add_mcq(mcq: Dict):
-    """Add a single MCQ to the bank."""
+    """Add a single question to the bank."""
     mcqs = load_bank()
     mcqs.append(mcq)
     save_bank(mcqs)
 
 
 def search_bank(query: str, top_k: int = 3) -> List[Dict]:
-    """Search the question bank with smart boosting for year, type, and set."""
+    """Search the question bank across all relevant fields with smart boosting."""
     mcqs = load_bank()
     query_words = query.lower().split()
     scored = []
     for item in mcqs:
         # Combine all searchable text
-      text_parts = [
-    item.get("question", ""),
-    item.get("explanation", ""),
-    item.get("answer", ""),
-    item.get("topic", ""),
-    item.get("figure_description", ""),
-    item.get("assertion", ""),   # <-- add this
-    item.get("reason", ""),      # <-- add this
-    str(item.get("year", "")),
-    item.get("set_type", ""),
-    item.get("type", ""),
-    str(item.get("marks", ""))
-]
+        text_parts = [
+            item.get("question", ""),
+            item.get("explanation", ""),
+            item.get("answer", ""),
+            item.get("topic", ""),
+            item.get("figure_description", ""),
+            item.get("assertion", ""),
+            item.get("reason", ""),
+            str(item.get("year", "")),
+            item.get("set_type", ""),
+            item.get("type", ""),
+            str(item.get("marks", ""))
+        ]
         combined = " ".join(text_parts).lower()
         
         # Base score: number of matching words
@@ -60,7 +58,7 @@ def search_bank(query: str, top_k: int = 3) -> List[Dict]:
         # Boost: if query mentions the exact year, add 10
         year_boost = 10 if str(item.get("year")) in query_words else 0
         
-        # Boost: if query mentions the type (mcq, short, long)
+        # Boost: if query mentions the type (mcq, short, long, assertion_reason)
         type_boost = 5 if item.get("type", "") in query_words else 0
         
         # Boost: if query mentions the set_type (regular/visually_impaired)
