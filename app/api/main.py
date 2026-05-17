@@ -141,6 +141,7 @@ async def ask_question(request: AskRequest):
         raise HTTPException(status_code=500, detail=result["answer"])
     return AskResponse(**result)
 
+
 @app.post("/mcq", response_model=MCQResponse)
 async def generate_mcq(request: MCQRequest):
     result = await ai_service.generate_mcq(request.topic, request.difficulty, request.language)
